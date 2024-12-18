@@ -1,0 +1,30 @@
+*{
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+
+/* Переписанные стили без использования :where() */
+.css-dev-only-do-not-override-1kf000u.ant-menu-dark.ant-menu-inline
+  .ant-menu-sub.ant-menu-inline,
+.css-dev-only-do-not-override-1kf000u.ant-menu-dark
+  > .ant-menu.ant-menu-inline
+  .ant-menu-sub.ant-menu-inline {
+  background-color: transparent;
+}
+
+.ant-menu .menu-item:hover {
+  background-color: #1890ff !important;  /* Пример фона */
+  color: white !important;  /* Пример цвета текста */
+}
+
+/* Если хотите, чтобы иконки тоже подсвечивались */
+.menu-item:hover .anticon {
+  color: white;               /* Белый цвет для иконки */
+}
+
+.task-inactive {
+  background-color: #f0f0f0; /* Серый фон для деактивированных задач */
+  color: gray; /* Текст серый */
+}
