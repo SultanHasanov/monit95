@@ -11,6 +11,7 @@ import SubItem3 from "./pages/SubItem3";
 import SubItem4 from "./pages/SubItem4";
 import SubItem5 from "./pages/SubItem5";
 import StudentManagementPage from "./pages/StudentManagementPage";
+import ExamPage from "./pages/ExamPage";
 
 const { Content } = Layout;
 
@@ -33,6 +34,7 @@ const App = () => {
               <Route path="subitem3" element={<SubItem3 />} />
               <Route path="subitem4" element={<SubItem4 />} />
               <Route path="subitem5" element={<SubItem5 />} />
+              <Route path="subitem1/exampage" element={<ExamPage/>} />
             </Routes>
           </Content>
         </Layout>

@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Upload, Switch, List, message, Popconfirm } from "antd";
-import { UploadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { UploadOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const SubItem1 = () => {
   const [form] = Form.useForm();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editingTask, setEditingTask] = useState(null); // Для редактирования задачи
+  const [isDocument, setIsDocument] = useState(true); // Toggle between document or link
+  const [editingTask, setEditingTask] = useState(null); // For task editing
+  const navigate = useNavigate(); 
+
 
   const fetchTasks = async () => {
     try {
@@ -23,42 +26,64 @@ const SubItem1 = () => {
   const handleSubmit = async (values) => {
     const { title, document } = values;
 
-    // Проверка на наличие файла
-    if (!document || !document[0] || !document[0].originFileObj) {
-      message.error("Пожалуйста, загрузите документ!");
-      return;
-    }
-
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", document[0].originFileObj); // Используем первый файл из массива document
+      if (isDocument) {
+        // Document upload logic
+        if (!document || !document[0] || !document[0].originFileObj) {
+          message.error("Пожалуйста, загрузите документ!");
+          setLoading(false);
+          return;
+        }
 
-      const uploadResponse = await axios.post("https://439aacc68c917992.mokky.dev/uploads", formData);
-      const fileUrl = uploadResponse.data.url;
-      const fileId = uploadResponse.data.id; // Предположительно API возвращает id файла
+        const formData = new FormData();
+        formData.append("file", document[0].originFileObj);
 
-      if (editingTask) {
-        // Если редактируем задачу
-        await axios.patch(`https://439aacc68c917992.mokky.dev/items/${editingTask.id}`, {
-          title,
-          fileUrl,
-          fileId, // Добавляем fileId
-        });
-        message.success("Задача успешно отредактирована!");
+        const uploadResponse = await axios.post("https://439aacc68c917992.mokky.dev/uploads", formData);
+        const fileUrl = uploadResponse.data.url;
+        const fileId = uploadResponse.data.id;
+
+        if (editingTask) {
+          await axios.patch(`https://439aacc68c917992.mokky.dev/items/${editingTask.id}`, {
+            title,
+            fileUrl,
+            fileId,
+            isDocument,
+          });
+          message.success("Задача успешно отредактирована!");
+        } else {
+          await axios.post("https://439aacc68c917992.mokky.dev/items", {
+            title,
+            fileUrl,
+            fileId,
+            isDocument,
+            active: true, // New tasks are active by default
+          });
+          message.success("Задача успешно создана!");
+        }
       } else {
-        // Если это новая задача
-        await axios.post("https://439aacc68c917992.mokky.dev/items", {
-          title,
-          fileUrl,
-          fileId, // Добавляем fileId
-        });
-        message.success("Задача успешно создана!");
+        // Add a task linked to /exampage
+        if (editingTask) {
+          await axios.patch(`https://439aacc68c917992.mokky.dev/items/${editingTask.id}`, {
+            title,
+            isDocument,
+            link: "/exampage",
+          });
+          message.success("Задача успешно отредактирована!");
+        } else {
+          await axios.post("https://439aacc68c917992.mokky.dev/items", {
+            title,
+            isDocument,
+            link: "/exampage",
+            active: true, // New tasks are active by default
+          });
+          message.success("Задача успешно создана!");
+        }
       }
 
       fetchTasks();
       form.resetFields();
-      setEditingTask(null); // Сбрасываем состояние редактирования
+      setEditingTask(null);
     } catch (error) {
       console.error("Ошибка при создании/редактировании задачи:", error);
       message.error("Не удалось создать или отредактировать задачу");
@@ -80,26 +105,23 @@ const SubItem1 = () => {
 
   const handleDelete = async (taskId, fileId) => {
     try {
-      // Удаление документа по ID
       if (fileId) {
         await axios.delete(`https://439aacc68c917992.mokky.dev/uploads/${fileId}`);
         message.success("Документ успешно удален!");
       }
-      // Удаление задачи
       await axios.delete(`https://439aacc68c917992.mokky.dev/items/${taskId}`);
-      message.success("Задача и документ успешно удалены!");
+      message.success("Задача успешно удалена!");
       fetchTasks();
     } catch (error) {
       console.error("Ошибка при удалении задачи:", error);
-      message.error("Не удалось удалить задачу и документ");
+      message.error("Не удалось удалить задачу");
     }
   };
 
   const handleEdit = (task) => {
-    setEditingTask(task); // Устанавливаем задачу для редактирования
-    form.setFieldsValue({
-      title: task.title,
-    });
+    setEditingTask(task);
+    setIsDocument(task.isDocument);
+    form.setFieldsValue({ title: task.title });
   };
 
   useEffect(() => {
@@ -108,23 +130,44 @@ const SubItem1 = () => {
 
   return (
     <div style={{ padding: "20px" }}>
+        <Button onClick={() => navigate(-1)}> <ArrowLeftOutlined /> Назад</Button>
       <h1>Управление задачами</h1>
       <Link to="/subitem1/students">Управление учениками</Link>
+
       <Form form={form} onFinish={handleSubmit} layout="vertical">
         <Form.Item name="title" label="Заголовок задачи" rules={[{ required: true, message: "Введите заголовок задачи!" }]}>
           <Input placeholder="Введите заголовок" />
         </Form.Item>
-        <Form.Item
-          name="document"
-          label="Документ"
-          valuePropName="file"
-          getValueFromEvent={(e) => (Array.isArray(e) ? e : e.fileList)} // Исправленная обработка файла
-          rules={[{ required: true, message: "Загрузите документ!" }]}
-        >
-          <Upload name="document" beforeUpload={() => false} maxCount={1}>
-            <Button icon={<UploadOutlined />}>Загрузить документ</Button>
-          </Upload>
+
+        <Form.Item label="Тип задачи">
+          <Switch
+            checked={isDocument}
+            onChange={setIsDocument}
+            checkedChildren="Документ"
+            unCheckedChildren="Ссылка"
+          />
         </Form.Item>
+
+        {isDocument ? (
+          <Form.Item
+            name="document"
+            label="Документ"
+            valuePropName="file"
+            getValueFromEvent={(e) => (Array.isArray(e) ? e : e.fileList)}
+            rules={[{ required: true, message: "Загрузите документ!" }]}
+          >
+            <Upload name="document" beforeUpload={() => false} maxCount={1}>
+              <Button icon={<UploadOutlined />}>Загрузить документ</Button>
+            </Upload>
+          </Form.Item>
+        ) : (
+          <Form.Item>
+            <div>
+              Ссылка на страницу: <Link to="/exampage">/exampage</Link>
+            </div>
+          </Form.Item>
+        )}
+
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading}>
             {editingTask ? "Редактировать задачу" : "Создать задачу"}
@@ -138,16 +181,22 @@ const SubItem1 = () => {
         dataSource={tasks}
         renderItem={(task) => (
           <List.Item
-            className={task.active ? "" : "task-inactive"} // Добавление класса для серого фона
+            className={task.active ? "" : "task-inactive"} // Grey out inactive tasks
             actions={[
-              task.active ? (
-                <a key="download" href={task.fileUrl} target="_blank" rel="noopener noreferrer">
-                  Скачать документ
-                </a>
+              task.isDocument ? (
+                task.active ? (
+                  <a key="download" href={task.fileUrl} target="_blank" rel="noopener noreferrer">
+                    Скачать документ
+                  </a>
+                ) : (
+                  <span key="download" style={{ color: "gray" }}>Скачать документ</span>
+                )
+              ) : task.active ? (
+                <Link key="results" to="exampage">
+                  Перейти к результатам
+                </Link>
               ) : (
-                <span key="download" style={{ color: "gray" }}>
-                  Скачать документ
-                </span>
+                <span key="results" style={{ color: "gray" }}>Перейти к результатам</span>
               ),
               <Switch
                 key="toggle"
@@ -158,7 +207,7 @@ const SubItem1 = () => {
               <Popconfirm
                 key="delete"
                 title="Вы уверены, что хотите удалить эту задачу?"
-                onConfirm={() => handleDelete(task.id, task.fileId)} // Передаем fileId для удаления документа
+                onConfirm={() => handleDelete(task.id, task.fileId)}
                 okText="Да"
                 cancelText="Нет"
               >
@@ -168,7 +217,9 @@ const SubItem1 = () => {
           >
             <List.Item.Meta
               title={task.title}
-              description={`Статус: ${task.active ? "Активно" : "Неактивно"}`}
+              description={`Тип: ${task.isDocument ? "Документ" : "Ссылка"} | Статус: ${
+                task.active ? "Активно" : "Неактивно"
+              }`}
             />
           </List.Item>
         )}

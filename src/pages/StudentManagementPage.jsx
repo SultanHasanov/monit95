@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Upload, Table, Popconfirm, message } from "antd";
-import { UploadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { UploadOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import axios from "axios";
 import * as XLSX from "xlsx"; // Library for handling Excel files
+import { useNavigate } from "react-router-dom";
 
 const StudentManagementPage = () => {
   const [form] = Form.useForm();
@@ -11,6 +12,7 @@ const StudentManagementPage = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [fileUploaded, setFileUploaded] = useState(false); // Track if file is uploaded
   const [uploadedStudents, setUploadedStudents] = useState([]); // Store students from the file
+  const navigate = useNavigate(); 
 
   // Fetch students from the server
   const fetchStudents = async () => {
@@ -138,6 +140,7 @@ const StudentManagementPage = () => {
 
   return (
     <div style={{ padding: "20px" }}>
+        <Button onClick={() => navigate(-1)}> <ArrowLeftOutlined /> Назад</Button>
       <h1>Управление учениками</h1>
 
       <Form form={form} onFinish={handleSubmit} layout="vertical">
